@@ -1,57 +1,128 @@
+const path = require("path");
 const { validationResult } = require("express-validator");
+const Task = require("../models/Task");
+const fs = require("fs");
 
-exports.getTasks = (req, res, next) => {
-    res.status(200).json({
-        tasks: [
-            {
-                id: "1",
-                title: "First Task",
-                content: "Complete the setup of the task manager app",
-                creator: "Nikola",
-                createdAt: "2024-03-28T08:00:00.000Z",
-                status: "completed",
-                priority: "low",
-            },
-            {
-                id: "2",
-                title: "Second Task",
-                content: "Design the frontend UI for task creation",
-                creator: "Max",
-                createdAt: "2024-03-28T09:30:00.000Z",
-                status: "pending",
-                priority: "high",
-            },
-            {
-                id: "3",
-                title: "Third Task",
-                content: "Connect React app with Node.js API",
-                creator: "Nikola",
-                createdAt: "2024-03-28T11:00:00.000Z",
-                status: "pending",
-                priority: "medium",
-            },
-        ],
-    });
+exports.getTasks = async (req, res, next) => {
+    try {
+        const tasks = await Task.find();
+        res.status(200).json({ message: "Posts fetched", tasks: tasks });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
 };
 
-exports.createTask = (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return res.status(422).json({ errors: errors.array() });
-    }
+exports.createTask = async (req, res, next) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            const error = new Error(
+                "Validation failed, enterer data is incorrect"
+            );
+            error.statusCode = 422;
+            throw error;
+        }
 
-    const { title, content, creator, priority, status } = req.body;
+        const { title, content, creator, priority, status } = req.body;
+        const imageUrl = req.file ? req.file.path.replace(/\\/g, "/") : null; // for linux servers - makes url web friendly
 
-    res.status(201).json({
-        message: "Task created successfully",
-        task: {
-            id: new Date().toISOString(),
+        const task = new Task({
             title,
             content,
             creator,
             priority,
             status,
-            createdAt: new Date().toISOString(),
-        },
-    });
+            imageUrl,
+        });
+
+        await task.save();
+
+        res.status(201).json({
+            message: "Task created successfully",
+            task,
+        });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+};
+
+exports.getTask = async (req, res, next) => {
+    try {
+        const taskId = req.params.taskId;
+
+        const task = await Task.findById(taskId);
+        if (!task) {
+            const error = new Error("Could not find post ");
+            error.statusCode = 404;
+            throw error;
+        }
+        res.status(200).json({ message: "Post fetched", task: task });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+};
+
+exports.updateTask = async (req, res, next) => {
+    try {
+        const taskId = req.params.taskId;
+
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            const error = new Error(
+                "Validation failed, enterer data is incorrect"
+            );
+            error.statusCode = 422;
+            throw error;
+        }
+        const { title, content, creator, priority, status } = req.body;
+        let imageUrl = req.body.image;
+        if (req.file) {
+            imageUrl = req.file.path;
+        }
+        // if (!imageUrl) {
+        //     const error = new Error("No File picked");
+        //     error.statusCode = 422;
+        //     throw error;
+        // }
+
+        const task = await Task.findById(taskId);
+        if (!task) {
+            const error = new Error("Could not find post ");
+            error.statusCode = 404;
+            throw error;
+        }
+
+        if ( imageUrl && (imageUrl != task.imageUrl)) {
+            clearImage(task.imageUrl);
+        }
+
+        task.title = title;
+        task.content = content;
+        task.creator = creator;
+        task.priority = priority;
+        task.status = status;
+        task.imageUrl = imageUrl ? imageUrl : task.imageUrl;
+        await task.save();
+
+        return res.status(200).json({ message: "Post Updated", task: task });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+};
+
+const clearImage = (filePath) => {
+    filePath = path.join(__dirname, "..", filePath);
+    fs.unlink(filePath, (err) => console.log(err));
 };

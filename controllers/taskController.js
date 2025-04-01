@@ -2,7 +2,6 @@ const path = require("path");
 const { validationResult } = require("express-validator");
 const Task = require("../models/Task");
 const fs = require("fs");
-
 exports.getTasks = async (req, res, next) => {
     try {
         const currentPage = req.query.page || 1;

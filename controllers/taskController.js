@@ -58,11 +58,11 @@ exports.getTask = async (req, res, next) => {
 
         const task = await Task.findById(taskId);
         if (!task) {
-            const error = new Error("Could not find post ");
+            const error = new Error("Could not find Task ");
             error.statusCode = 404;
             throw error;
         }
-        res.status(200).json({ message: "Post fetched", task: task });
+        res.status(200).json({ message: "Task fetched", task: task });
     } catch (error) {
         if (!error.statusCode) {
             error.statusCode = 500;
@@ -101,7 +101,7 @@ exports.updateTask = async (req, res, next) => {
             throw error;
         }
 
-        if ( imageUrl && (imageUrl != task.imageUrl)) {
+        if (imageUrl && imageUrl != task.imageUrl) {
             clearImage(task.imageUrl);
         }
 
@@ -114,6 +114,30 @@ exports.updateTask = async (req, res, next) => {
         await task.save();
 
         return res.status(200).json({ message: "Post Updated", task: task });
+    } catch (error) {
+        if (!error.statusCode) {
+            error.statusCode = 500;
+        }
+        next(error);
+    }
+};
+
+exports.deleteTask = async (req, res, next) => {
+    try {
+        const taskId = req.params.taskId;
+        const task = await Task.findById(taskId);
+        if (!task) {
+            const error = new Error("Could not find Task ");
+            error.statusCode = 404;
+            throw error;
+        }
+        //checked logged in user
+
+        if (task.imageUrl) {
+            clearImage(task.imageUrl);
+        }
+        await Task.findByIdAndDelete(taskId);
+        return res.status(200).json({ message: "Deleted task" });
     } catch (error) {
         if (!error.statusCode) {
             error.statusCode = 500;

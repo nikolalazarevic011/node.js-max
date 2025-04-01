@@ -12,6 +12,7 @@ router.post(
     taskController.createTask
 );
 router.get("/task/:taskId", taskController.getTask);
+    router.delete("/task/:taskId", taskController.deleteTask);
 router.put(
     "/task/:taskId",
     upload.single("image"),

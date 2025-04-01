@@ -5,8 +5,17 @@ const fs = require("fs");
 
 exports.getTasks = async (req, res, next) => {
     try {
-        const tasks = await Task.find();
-        res.status(200).json({ message: "Posts fetched", tasks: tasks });
+        const currentPage = req.query.page || 1;
+        const perPage = 5; //same as fronted usually 386. Adding Pagination
+        let totalItems = await Task.find().countDocuments();
+        const tasks = await Task.find()
+            .skip((currentPage - 1) * perPage)
+            .limit(perPage);
+        res.status(200).json({
+            message: "Posts fetched",
+            tasks: tasks,
+            totalItems: totalItems,
+        });
     } catch (error) {
         if (!error.statusCode) {
             error.statusCode = 500;

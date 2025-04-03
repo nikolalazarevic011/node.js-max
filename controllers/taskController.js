@@ -2,6 +2,8 @@ const path = require("path");
 const { validationResult } = require("express-validator");
 const Task = require("../models/Task");
 const fs = require("fs");
+const User = require("../models/User");
+
 exports.getTasks = async (req, res, next) => {
     try {
         const currentPage = req.query.page || 1;
@@ -33,24 +35,32 @@ exports.createTask = async (req, res, next) => {
             error.statusCode = 422;
             throw error;
         }
-
-        const { title, content, creator, priority, status } = req.body;
+        const { title, content, priority, status } = req.body;
         const imageUrl = req.file ? req.file.path.replace(/\\/g, "/") : null; // for linux servers - makes url web friendly
 
         const task = new Task({
             title,
             content,
-            creator,
+            creator: req.userId,
             priority,
             status,
             imageUrl,
         });
 
+        const user = await User.findById(req.userId);
+        if (!user) {
+            const error = new Error("User not found");
+            error.statusCode = 404;
+            throw error;
+        }
+        user.tasks.push(task._id);
         await task.save();
+        await user.save();
 
         res.status(201).json({
             message: "Task created successfully",
             task,
+            creator: { _id: user._id, email: user.email },
         });
     } catch (error) {
         if (!error.statusCode) {

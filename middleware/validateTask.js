@@ -9,9 +9,9 @@ const validateTask = [
     .exists({ checkFalsy: true })
     .withMessage('Content is required'),
 
-  body('creator')
-    .exists({ checkFalsy: true })
-    .withMessage('Creator is required'),
+  // body('creator')
+  //   .exists({ checkFalsy: true })
+  //   .withMessage('Creator is required'),
 
   body('priority')
     .isIn(['low', 'medium', 'high'])

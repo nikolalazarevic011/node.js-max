@@ -3,6 +3,7 @@ const { validationResult } = require("express-validator");
 const Task = require("../models/Task");
 const fs = require("fs");
 const User = require("../models/User");
+const { post } = require("../routes/taskRoutes");
 
 exports.getTasks = async (req, res, next) => {
     try {
@@ -119,6 +120,12 @@ exports.updateTask = async (req, res, next) => {
             throw error;
         }
 
+        if (task.creator.toString() !== req.userId) {
+            const error = new Error("Not authorized");
+            error.statusCode = 403;
+            throw error;
+        }
+
         if (imageUrl && imageUrl != task.imageUrl) {
             clearImage(task.imageUrl);
         }
@@ -149,12 +156,19 @@ exports.deleteTask = async (req, res, next) => {
             error.statusCode = 404;
             throw error;
         }
-        //checked logged in user
+        if (task.creator.toString() !== req.userId) {
+            const error = new Error("Not authorized");
+            error.statusCode = 403;
+            throw error;
+        }
 
         if (task.imageUrl) {
             clearImage(task.imageUrl);
         }
         await Task.findByIdAndDelete(taskId);
+        const user = await User.findById(req.userId);
+        await user.tasks.pull(taskId);
+        await user.save();
         return res.status(200).json({ message: "Deleted task" });
     } catch (error) {
         if (!error.statusCode) {

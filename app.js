@@ -1,7 +1,8 @@
-const path = require('path');
+const path = require("path");
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const socket = require("./socket");
 
 const taskRoutes = require("./routes/taskRoutes");
 const authRoutes = require("./routes/authRoutes");
@@ -33,7 +34,7 @@ app.use((error, req, res, next) => {
     const status = error.statusCode || 500;
     const message = error.message;
     const data = error.data;
-    res.status(status).json({ message: message , data: data});
+    res.status(status).json({ message: message, data: data });
 });
 
 mongoose
@@ -41,6 +42,11 @@ mongoose
         "mongodb+srv://nikolawork95:7yVgpXPbZRoqNg1x@cluster0.lxqyqn1.mongodb.net/tasks?retryWrites=true&w=majority&appName=Cluster0"
     )
     .then((result) => {
-        app.listen(8087);
+        const server = app.listen(8087);
+        const io = socket.init(server);
+
+        io.on("connection", (socket) => {
+            console.log("Client connected");
+        });
     })
     .catch((err) => console.log(err));

@@ -4,6 +4,7 @@ const Task = require("../models/Task");
 const fs = require("fs");
 const User = require("../models/User");
 const { post } = require("../routes/taskRoutes");
+const socket = require("../socket");
 
 exports.getTasks = async (req, res, next) => {
     try {
@@ -11,8 +12,10 @@ exports.getTasks = async (req, res, next) => {
         const perPage = 5; //same as fronted usually 386. Adding Pagination
         let totalItems = await Task.find().countDocuments();
         const tasks = await Task.find()
+            .sort({ createdAt: -1 })
             .skip((currentPage - 1) * perPage)
             .limit(perPage);
+        socket.getIO().emit("tasks", { action: "get", tasks: tasks });
         res.status(200).json({
             message: "Posts fetched",
             tasks: tasks,
@@ -58,6 +61,7 @@ exports.createTask = async (req, res, next) => {
         await task.save();
         await user.save();
 
+        socket.getIO().emit("task", { action: "create", task: task });
         res.status(201).json({
             message: "Task created successfully",
             task,

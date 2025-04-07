@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head><title>Socket.IO Test</title></head>
+<body>
+  <h2>Socket.IO Test</h2>
+  <pre id="log"></pre>
+
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <script>
+    const log = (msg) => document.getElementById('log').textContent += msg + '\n';
+
+    const socket = io("http://localhost:8087");
+
+    socket.on("connect", () => {
+      log("✅ Connected to server");
+    });
+
+    socket.on("task", (data) => { //menjas tasks/task u zavisnosti da li je get ili post, ili stavi u controller da budu isti pa onda ne moras?
+      log("📥 tasks event:");
+      log(JSON.stringify(data, null, 2));
+    });
+
+    socket.on("disconnect", () => {
+      log("❌ Disconnected");
+    });
+  </script>
+</body>
+</html>

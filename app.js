@@ -1,3 +1,4 @@
+require("dotenv").config();
 const path = require("path");
 const express = require("express");
 const bodyParser = require("body-parser");
@@ -11,7 +12,7 @@ const app = express();
 
 app.use(bodyParser.json());
 
-app.use("/images", express.static(path.join(__dirname, "images")));
+// app.use("/images", express.static(path.join(__dirname, "images"))); //old, i swtitched to amazon S3 april.9.25?
 
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -39,7 +40,7 @@ app.use((error, req, res, next) => {
 
 mongoose
     .connect(
-        "mongodb+srv://nikolawork95:7yVgpXPbZRoqNg1x@cluster0.lxqyqn1.mongodb.net/tasks?retryWrites=true&w=majority&appName=Cluster0"
+     process.env.MONGO_DB
     )
     .then((result) => {
         const server = app.listen(8087);

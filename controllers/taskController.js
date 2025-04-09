@@ -3,8 +3,8 @@ const { validationResult } = require("express-validator");
 const Task = require("../models/Task");
 const fs = require("fs");
 const User = require("../models/User");
-const { post } = require("../routes/taskRoutes");
 const socket = require("../socket");
+const { uploadToS3, deleteFromS3 } = require("../utils/s3Upload");
 
 exports.getTasks = async (req, res, next) => {
     try {
@@ -40,8 +40,13 @@ exports.createTask = async (req, res, next) => {
             throw error;
         }
         const { title, content, priority, status } = req.body;
-        const imageUrl = req.file ? req.file.path.replace(/\\/g, "/") : null; // for linux servers - makes url web friendly
+        let imageUrl = null;
 
+        // 🔴 Upload image to S3 if file exists
+        if (req.file) {
+            const result = await uploadToS3(req.file);
+            imageUrl = result.Location; // 🔴 Get public S3 URL
+        }
         const task = new Task({
             title,
             content,
@@ -109,7 +114,8 @@ exports.updateTask = async (req, res, next) => {
         const { title, content, creator, priority, status } = req.body;
         let imageUrl = req.body.image;
         if (req.file) {
-            imageUrl = req.file.path;
+            const result = await uploadToS3(req.file);
+            imageUrl = result.Location;
         }
         // if (!imageUrl) {
         //     const error = new Error("No File picked");
@@ -131,7 +137,7 @@ exports.updateTask = async (req, res, next) => {
         }
 
         if (imageUrl && imageUrl != task.imageUrl) {
-            clearImage(task.imageUrl);
+            await deleteFromS3(task.imageUrl);
         }
 
         task.title = title;
@@ -167,7 +173,7 @@ exports.deleteTask = async (req, res, next) => {
         }
 
         if (task.imageUrl) {
-            clearImage(task.imageUrl);
+            await deleteFromS3(task.imageUrl);
         }
         await Task.findByIdAndDelete(taskId);
         const user = await User.findById(req.userId);
@@ -180,9 +186,4 @@ exports.deleteTask = async (req, res, next) => {
         }
         next(error);
     }
-};
-
-const clearImage = (filePath) => {
-    filePath = path.join(__dirname, "..", filePath);
-    fs.unlink(filePath, (err) => console.log(err));
 };
